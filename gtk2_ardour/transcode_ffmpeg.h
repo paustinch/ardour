@@ -104,7 +104,7 @@ class TranscodeFfmpeg : public sigc::trackable
 		 */
 		PBD::Signal2<void, ARDOUR::samplecnt_t, ARDOUR::samplecnt_t> Progress;
 		/** signal emitted when the transcoder process terminates. */
-		PBD::Signal0<void> Finished;
+		PBD::Signal1<void, int> Finished;
 
 		double get_fps () { return m_fps; }
 		double get_aspect () { return m_aspect; }

@@ -296,7 +296,6 @@ TranscodeFfmpeg::default_meta_data ()
 	return ffm;
 }
 
-
 bool
 TranscodeFfmpeg::encode (std::string outfile, std::string inf_a, std::string inf_v, TranscodeFfmpeg::FFSettings ffs, TranscodeFfmpeg::FFSettings meta, bool map)
 {
@@ -307,9 +306,12 @@ TranscodeFfmpeg::encode (std::string outfile, std::string inf_a, std::string inf
 	argp=(char**) calloc(MAX_FFMPEG_ENCODER_ARGS,sizeof(char*));
 	argp[a++] = strdup(ffmpeg_exe.c_str());
 	if (m_avoffset < 0 || m_avoffset > 0) {
+		argp[a++] = strdup("-accurate_seek");
 		std::ostringstream osstream; osstream << m_avoffset;
 		argp[a++] = strdup("-itsoffset");
 		argp[a++] = strdup(osstream.str().c_str());
+		argp[a++] = strdup("-ss");
+		argp[a++] = strdup("0");
 	}
 	argp[a++] = strdup("-i");
 	argp[a++] = strdup(inf_v.c_str());
@@ -442,7 +444,6 @@ TranscodeFfmpeg::extract_audio (std::string outfile, ARDOUR::samplecnt_t /*sampl
 	return true;
 }
 
-
 bool
 TranscodeFfmpeg::transcode (std::string outfile, const int outw, const int outh, const int kbitps)
 {
@@ -465,7 +466,7 @@ TranscodeFfmpeg::transcode (std::string outfile, const int outw, const int outh,
 	if (bitrate < 10)  bitrate = 10;
 	if (bitrate > 1000) bitrate = 1000;
 
-	argp=(char**) calloc(16,sizeof(char*));
+	argp=(char**) calloc (15, sizeof(char*));
 	argp[0] = strdup(ffmpeg_exe.c_str());
 	argp[1] = strdup("-i");
 	argp[2] = strdup(infile.c_str());
@@ -477,19 +478,18 @@ TranscodeFfmpeg::transcode (std::string outfile, const int outw, const int outh,
 	argp[8] = strdup("-vcodec");
 	argp[9] = strdup("mjpeg");
 	argp[10] = strdup("-an");
-	argp[11] = strdup("-intra");
-	argp[12] = strdup("-g");
-	argp[13] = strdup("1");
-	argp[14] = strdup(outfile.c_str());
-	argp[15] = (char *)0;
+	argp[11] = strdup("-g");
+	argp[12] = strdup("0");
+	argp[13] = strdup(outfile.c_str());
+	argp[14] = (char *)0;
 	/* Note: these are free()d in ~SystemExec */
 #if 1 /* DEBUG */
 	if (debug_enable) { /* tentative debug mode */
-	printf("TRANSCODE VIDEO:\n");
-	for (int i=0; i< 15; ++i) {
-	  printf("%s ", argp[i]);
-	}
-	printf("\n");
+		printf("TRANSCODE VIDEO:\n");
+		for (int i=0; i< 15; ++i) {
+			printf("%s ", argp[i]);
+		}
+		printf("\n");
 	}
 #endif
 	ffcmd = new ARDOUR::SystemExec(ffmpeg_exe, argp);
@@ -520,9 +520,10 @@ TranscodeFfmpeg::cancel ()
 void
 TranscodeFfmpeg::ffexit ()
 {
+	int rv = ffcmd->wait();
 	delete ffcmd;
 	ffcmd=0;
-	Finished(); /* EMIT SIGNAL */
+	Finished (rv); /* EMIT SIGNAL */
 }
 
 void
@@ -558,6 +559,7 @@ TranscodeFfmpeg::ffmpegparse_a (std::string d, size_t /* s */)
 void
 TranscodeFfmpeg::ffmpegparse_v (std::string d, size_t /* s */)
 {
+	// also check for "Invalid argument"
 	if (strstr(d.c_str(), "ERROR") || strstr(d.c_str(), "Error") || strstr(d.c_str(), "error")) {
 		warning << "ffmpeg-error: " << d << endmsg;
 	}

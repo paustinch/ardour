@@ -332,9 +332,12 @@ TranscodeVideoDialog::update_progress (samplecnt_t c, samplecnt_t a)
 }
 
 void
-TranscodeVideoDialog::finished ()
+TranscodeVideoDialog::finished (int status)
 {
-	if (aborted) {
+	if (aborted || status != 0) {
+		if (!aborted) {
+			ARDOUR_UI::instance()->popup_error(_("Video transcoding failed."));
+		}
 		::g_unlink(path_entry.get_text().c_str());
 		if (!audiofile.empty()) {
 			::g_unlink(audiofile.c_str());
@@ -353,7 +356,7 @@ void
 TranscodeVideoDialog::launch_audioonly ()
 {
 	if (audio_combo.get_active_row_number() == 0) {
-		finished();
+		finished (0);
 		return;
 	}
 	dialog_progress_mode();
@@ -363,7 +366,7 @@ TranscodeVideoDialog::launch_audioonly ()
 	}
 #endif
 	transcoder->Progress.connect(*this, invalidator (*this), boost::bind (&TranscodeVideoDialog::update_progress , this, _1, _2), gui_context());
-	transcoder->Finished.connect(*this, invalidator (*this), boost::bind (&TranscodeVideoDialog::finished, this), gui_context());
+	transcoder->Finished.connect(*this, invalidator (*this), boost::bind (&TranscodeVideoDialog::finished, this, _1), gui_context());
 	launch_extract();
 }
 
@@ -436,7 +439,7 @@ TranscodeVideoDialog::launch_transcode ()
 	}
 
 	transcoder->Progress.connect(*this, invalidator (*this), boost::bind (&TranscodeVideoDialog::update_progress , this, _1, _2), gui_context());
-	transcoder->Finished.connect(*this, invalidator (*this), boost::bind (&TranscodeVideoDialog::finished, this), gui_context());
+	transcoder->Finished.connect(*this, invalidator (*this), boost::bind (&TranscodeVideoDialog::finished, this, _1), gui_context());
 	if (!transcoder->transcode(outfn, scale_width, scale_height, bitrate)) {
 		ARDOUR_UI::instance()->popup_error(_("Transcoding Failed."));
 		Gtk::Dialog::response(RESPONSE_CANCEL);

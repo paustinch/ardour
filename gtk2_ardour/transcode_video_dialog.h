@@ -81,7 +81,7 @@ private:
 	double m_aspect;
 
 	PBD::Signal0<void> StartNextStage;
-	void finished ();
+	void finished (int);
 	void update_progress (ARDOUR::samplecnt_t, ARDOUR::samplecnt_t);
 
 	TranscodeFfmpeg *transcoder;
